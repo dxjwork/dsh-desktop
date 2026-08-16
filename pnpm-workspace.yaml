@@ -1,0 +1,11 @@
+# pnpm 11 settings. pnpm 10+ blocks any dependency shipping an install/build
+# script until it is explicitly reviewed here (strictDepBuilds defaults to
+# true, so an unlisted script is a hard install error).
+#
+#   electron:            must run its postinstall to download the Electron binary.
+#   electron-winstaller: pulled in by electron-builder for the Squirrel.Windows
+#                        target only; we ship NSIS + portable, so its script is
+#                        denied (installing still succeeds).
+allowBuilds:
+  electron: true
+  electron-winstaller: false

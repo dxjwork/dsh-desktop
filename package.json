@@ -1,0 +1,22 @@
+{
+  "name": "dsh-desktop",
+  "version": "0.1.0",
+  "description": "Independent Electron desktop client for the DeepSeek Harness web GUI: pick the harness source directory on first launch, then shell `dsh web` in a native window.",
+  "type": "module",
+  "main": "src/main.js",
+  "license": "MIT",
+  "author": "dxjwork/dsh-desktop",
+  "private": true,
+  "packageManager": "pnpm@11.22.0",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "smoke": "node scripts/smoke-start.js",
+    "build": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^26.15.3"
+  }
+}

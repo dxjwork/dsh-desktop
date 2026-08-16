@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>设置</title>
+  <style>
+    html, body { height: 100%; margin: 0; font-family: system-ui, "Segoe UI", "Microsoft YaHei", sans-serif; background: #0f1115; color: #e6e6e6; }
+    body { display: flex; align-items: flex-start; justify-content: center; }
+    .card { width: 100%; max-width: 470px; padding: 20px 22px; box-sizing: border-box; }
+    h1 { font-size: 16px; margin: 0 0 16px; }
+    .field { display: block; margin-bottom: 14px; }
+    .label { display: block; font-size: 12px; color: #9aa4b2; margin-bottom: 5px; }
+    .row { display: flex; gap: 8px; }
+    input { width: 100%; box-sizing: border-box; background: #1a1f29; border: 1px solid #2a3140; border-radius: 7px; color: #e6e6e6; padding: 7px 9px; font-size: 13px; }
+    input:focus { outline: none; border-color: #4f8cff; }
+    .row input { flex: 1; }
+    button { background: #1a1f29; border: 1px solid #2a3140; border-radius: 7px; color: #e6e6e6; padding: 7px 14px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+    button:hover { border-color: #3a4150; }
+    button.primary { background: #4f8cff; border-color: #4f8cff; color: #0b0d12; font-weight: 600; }
+    button.primary:hover { background: #5f98ff; }
+    .hint { display: block; font-size: 11px; color: #6b7484; margin-top: 4px; }
+    .actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+    .status { font-size: 12px; margin-right: auto; }
+    .status.ok { color: #3fb950; }
+    .status.err { color: #f85149; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>设置</h1>
+
+    <label class="field">
+      <span class="label">Harness 源码目录</span>
+      <div class="row">
+        <input id="harnessSourcePath" type="text" spellcheck="false" placeholder="D:\path\to\deepseek-harness" />
+        <button id="browse" type="button">浏览…</button>
+      </div>
+      <span class="hint">dsh web 的源码检出目录（纯净官方源）。修改后保存会重启 web 服务。</span>
+    </label>
+
+    <label class="field">
+      <span class="label">DeepSeek API Key</span>
+      <input id="deepseekApiKey" type="password" spellcheck="false" placeholder="sk-..." autocomplete="off" />
+      <span class="hint">用于查询账户余额；留空则默认用 dsh web 服务已配置的 key（~/.dsh/.credentials.yaml），再退回环境变量 DEEPSEEK_API_KEY。</span>
+    </label>
+
+    <label class="field">
+      <span class="label">DeepSeek Base URL（可选）</span>
+      <input id="deepseekBaseUrl" type="text" spellcheck="false" placeholder="https://api.deepseek.com" />
+      <span class="hint">留空则默认 https://api.deepseek.com（或读 DEEPSEEK_BASE_URL）。</span>
+    </label>
+
+    <div class="actions">
+      <span id="status" class="status"></span>
+      <button id="cancel" type="button">取消</button>
+      <button id="save" type="button" class="primary">保存</button>
+    </div>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id)
+    const setStatus = (text, ok) => {
+      const el = $('status')
+      el.textContent = text
+      el.className = 'status ' + (ok ? 'ok' : 'err')
+    }
+
+    async function init() {
+      try {
+        const config = await window.__dshSettings.get()
+        $('harnessSourcePath').value = config.harnessSourcePath || ''
+        $('deepseekApiKey').value = config.deepseekApiKey || ''
+        $('deepseekBaseUrl').value = config.deepseekBaseUrl || ''
+      } catch (error) {
+        setStatus('读取配置失败：' + (error && error.message ? error.message : error), false)
+      }
+    }
+
+    $('browse').addEventListener('click', async () => {
+      try {
+        const picked = await window.__dshSettings.pickDirectory($('harnessSourcePath').value)
+        if (picked) $('harnessSourcePath').value = picked
+      } catch (error) {
+        setStatus('选择目录失败', false)
+      }
+    })
+
+    $('cancel').addEventListener('click', () => window.close())
+
+    $('save').addEventListener('click', async () => {
+      const patch = {
+        harnessSourcePath: $('harnessSourcePath').value.trim(),
+        deepseekApiKey: $('deepseekApiKey').value.trim(),
+        deepseekBaseUrl: $('deepseekBaseUrl').value.trim(),
+      }
+      try {
+        const result = await window.__dshSettings.save(patch)
+        if (!result || !result.ok) {
+          setStatus((result && result.error) || '保存失败', false)
+          return
+        }
+        setStatus(result.sourceChanged ? '已保存，正在重启 web 服务…' : '已保存 ✓', true)
+        setTimeout(() => window.close(), 800)
+      } catch (error) {
+        setStatus('保存失败：' + (error && error.message ? error.message : error), false)
+      }
+    })
+
+    void init()
+  </script>
+</body>
+</html>
