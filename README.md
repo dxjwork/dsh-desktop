@@ -1,7 +1,7 @@
 # dsh-desktop
 
 DeepSeek Harness 的独立桌面客户端：一个 Electron 外壳，直接使用仓库内的
-`deepseek-harness-external` git 子模块作为官方 web 服务源码，在子进程中启动
+`deepseek-harness` git 子模块作为官方 web 服务源码，在子进程中启动
 它的 `dsh web`，并在原生窗口中打开它所提供的浏览器 GUI。
 
 外壳**不内嵌** harness：它启动与手动运行相同的 `node apps/cli/lib/bin.js web --port 0`
@@ -12,7 +12,7 @@ URL。harness 与窗口共享同一生命周期：关闭窗口会停止 harness�
 ## 环境要求
 
 - `PATH` 上存在 Node `^22.19 || >=24`（外壳用系统 `node` 启动 harness）。
-- `deepseek-harness-external` git 子模块已拉取（`git submodule update --init`），
+- `deepseek-harness` git 子模块已拉取（`git submodule update --init`），
   且已构建（需要 `apps/cli/lib/bin.js` 与 `apps/web/dist`）。
 - pnpm（工程自身依赖安装使用 pnpm）。
 
@@ -50,7 +50,7 @@ node scripts/smoke-start.js <harness源码目录>   # 无 GUI 冒烟测试（指
 DSH_SOURCE_PATH=<harness源码目录> pnpm run smoke  # 或通过环境变量指定
 ```
 
-启动时直接使用仓库内的 `deepseek-harness-external` 子模块，不再提示选择目录。
+启动时直接使用仓库内的 `deepseek-harness` 子模块，不再提示选择目录。
 若子模块尚未拉取，会弹窗提示执行 `git submodule update --init`（或点按钮由
 客户端代为执行）。菜单栏 **文件 → 重启 web 服务** 可重启。
 
@@ -73,7 +73,7 @@ pnpm run dist              # 产出 Windows 安装包（NSIS）与便携版（po
 - `src/build.js`：按 lockfile 探测包管理器（pnpm/npm/yarn），提供 install/build。
 - `src/harness.ts` 的 JS 移植 `src/harness.js`：spawn `node <bin> web --port 0`，
   解析就绪行，提供 SIGTERM → SIGKILL 递增的 `stop()`。
-- `src/main.js`：定位 `deepseek-harness-external` 子模块（缺失时提示执行
+- `src/main.js`：定位 `deepseek-harness` 子模块（缺失时提示执行
   `git submodule update --init`）、必要时构建、启动 harness、开原生窗口、
   外链转系统浏览器、退出前停止子进程。
 - `renderer/loading.html`：启动/构建期间的加载窗口。

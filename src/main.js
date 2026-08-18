@@ -1,6 +1,6 @@
 /**
  * Electron main entry for the desktop shell. It boots the
- * `deepseek-harness-external` git submodule's `dsh web` as a child process,
+ * `deepseek-harness` git submodule's `dsh web` as a child process,
  * waits for its readiness line, and opens one native window over the served
  * GUI. If the submodule has not been pulled yet, it prompts the user to run
  * `git submodule update --init`.
@@ -14,11 +14,11 @@ import { fileURLToPath } from 'node:url'
 import { app, BrowserWindow, dialog, Menu, shell } from 'electron'
 import { buildSource, detectPackageManager, installDependencies, sourceHasDependencies } from './build.js'
 import { buildHarnessArgs, startHarness } from './harness.js'
-import { resolveDshBin, validateSourcePath } from './source.js'
+import { resolveDshBin, sourceIsBuilt, validateSourcePath } from './source.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 /** The git submodule that carries the official harness source. */
-const SUBMODULE_NAME = 'deepseek-harness-external'
+const SUBMODULE_NAME = 'deepseek-harness'
 const LOADING_HTML = join(__dirname, '..', 'renderer', 'loading.html')
 
 /** The running harness, undefined before boot resolves or after a failure. */
@@ -159,12 +159,13 @@ function runSubmoduleUpdate(projectRoot) {
  */
 async function ensureSubmoduleSource() {
   const sourcePath = resolveSubmoduleSource()
+  setStatus(sourcePath)
   if (sourcePath !== undefined) return sourcePath
 
   const { response } = await dialog.showMessageBox({
     type: 'warning',
     title: '缺少子模块源码',
-    message: '未找到 deepseek-harness-external 子模块源码。',
+    message: '未找到 deepseek-harness 子模块源码。',
     detail: '请先拉取子模块源码（在项目根目录）：\n\n  git submodule update --init\n\n也可点击下方按钮由本客户端代为执行。',
     buttons: ['执行拉取', '退出'],
     defaultId: 0,
@@ -195,15 +196,14 @@ async function buildSourceWithProgress(sourcePath) {
 
 /** Resolve the built dsh CLI, offering to build the checkout when it is absent. */
 async function ensureBuiltBin(sourcePath) {
-  const existing = resolveDshBin(sourcePath)
-  if (existing) return existing
+  if (sourceIsBuilt(sourcePath)) return resolveDshBin(sourcePath)
   const { response } = await dialog.showMessageBox({
     type: 'question',
     buttons: ['构建', '退出'],
     defaultId: 0,
     cancelId: 1,
     title: '源码尚未构建',
-    message: '未找到 apps/cli/lib/bin.js，web 服务源码尚未构建。',
+    message: '未找到 apps/cli/lib/bin.js 或 apps/web/dist，web 服务源码尚未构建。',
     detail: '将在此目录运行 install（如需要）和 run build。是否现在构建？',
   })
   if (response !== 0) return undefined

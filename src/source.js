@@ -11,6 +11,7 @@ import { join } from 'node:path'
 const ROOT_MANIFEST = 'package.json'
 const CLI_BIN = join('apps', 'cli', 'lib', 'bin.js')
 const CLI_SOURCE = join('apps', 'cli', 'src', 'bin.ts')
+const WEB_DIST_INDEX = join('apps', 'web', 'dist', 'index.html')
 
 /**
  * Absolute path of the built dsh CLI bundle, or `undefined` when the checkout
@@ -20,6 +21,16 @@ const CLI_SOURCE = join('apps', 'cli', 'src', 'bin.ts')
 export function resolveDshBin(sourcePath) {
   const bin = join(sourcePath, CLI_BIN)
   return existsSync(bin) ? bin : undefined
+}
+
+/**
+ * Whether a checkout is fully built. `dsh web` needs both the CLI bundle and
+ * the web frontend dist (it refuses to boot without `apps/web/dist`), so the
+ * CLI alone is not enough for the shell to start.
+ * @param {string} sourcePath - root of the DeepSeek Harness checkout.
+ */
+export function sourceIsBuilt(sourcePath) {
+  return resolveDshBin(sourcePath) !== undefined && existsSync(join(sourcePath, WEB_DIST_INDEX))
 }
 
 /**

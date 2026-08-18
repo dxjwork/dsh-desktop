@@ -29,15 +29,33 @@ function commandFor(pm) {
 }
 
 /**
+ * Quote one argument for a cmd.exe command line: wrap it in double quotes when
+ * it contains whitespace or cmd metacharacters; leave plain words untouched.
+ */
+function quoteCmdArg(arg) {
+  const text = String(arg)
+  if (/^[A-Za-z0-9_./\\:-]+$/.test(text)) return text
+  return `"${text.replace(/"/g, '""')}"`
+}
+
+/**
  * Run a command to completion, streaming each output line to `onLine`.
  * Resolves on exit code 0, rejects on spawn failure or a non-zero exit.
+ * Windows cannot spawn `.cmd`/`.bat` scripts directly (Node throws EINVAL), so
+ * such commands run through `cmd.exe /d /s /c` instead.
  */
-function run(command, args, cwd, onLine) {
+function run(command, args, cwd, onLine, env = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
+    const isCmdScript = process.platform === 'win32' && /\.(cmd|bat)$/i.test(command)
+    const file = isCmdScript ? (process.env.ComSpec || 'cmd.exe') : command
+    const spawnArgs = isCmdScript
+      ? ['/d', '/s', '/c', [command, ...args].map(quoteCmdArg).join(' ')]
+      : args
+    const child = spawn(file, spawnArgs, {
       cwd,
-      env: process.env,
+      env: { ...process.env, ...env },
       stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
     })
     child.stdout.setEncoding('utf8')
     child.stderr.setEncoding('utf8')
@@ -69,7 +87,15 @@ function run(command, args, cwd, onLine) {
 /** Install the checkout's dependencies with its own package manager. */
 export function installDependencies(sourcePath, onLine) {
   const pm = detectPackageManager(sourcePath)
-  return run(commandFor(pm), ['install'], sourcePath, onLine)
+  const env = {}
+  if (pm === 'pnpm') {
+    // pnpm sometimes decides node_modules must be removed and re-created (the
+    // checkout moved, or the lockfile changed since the last install). Without
+    // a TTY it then aborts with ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY
+    // instead of asking, so tell it to proceed non-interactively.
+    env.npm_config_confirm_modules_purge = 'false'
+  }
+  return run(commandFor(pm), ['install'], sourcePath, onLine, env)
 }
 
 /** Build the checkout (`<pm> run build`), which produces the dsh CLI bundle. */
